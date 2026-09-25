@@ -30,6 +30,7 @@ async def weather() -> dict[str, Any]:
         'longitude': WEATHER_LON,
         'timezone': WEATHER_TZ,
         'current': 'temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m',
+        'hourly': 'temperature_2m,apparent_temperature',
         'daily': 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code',
         'forecast_days': 7,
     }
@@ -40,10 +41,36 @@ async def weather() -> dict[str, Any]:
 
     c = data['current']
     d = data['daily']
+    h = data['hourly']
     temp = c['temperature_2m']
     feels = c['apparent_temperature']
     rain = d['precipitation_probability_max'][0]
     wind = c['wind_speed_10m']
+
+    hourly_lookup = {
+        timestamp: {
+            'temperature': h['temperature_2m'][i],
+            'feels_like': h['apparent_temperature'][i],
+        }
+        for i, timestamp in enumerate(h['time'])
+    }
+
+    today = d['time'][0]
+    period_defs = [
+        ('Reggel', '08:00', '🌅'),
+        ('Napközben', '14:00', '☀️'),
+        ('Este', '20:00', '🌙'),
+    ]
+    periods = []
+    for label, clock, icon in period_defs:
+        values = hourly_lookup.get(f'{today}T{clock}')
+        if values is not None:
+            periods.append({
+                'label': label,
+                'time': clock,
+                'icon': icon,
+                **values,
+            })
 
     clothes = []
     if feels <= 5:
@@ -62,6 +89,7 @@ async def weather() -> dict[str, Any]:
     return {
         'current': {'temperature': temp, 'feels_like': feels, 'wind': wind, 'precipitation': c['precipitation']},
         'today': {'min': d['temperature_2m_min'][0], 'max': d['temperature_2m_max'][0], 'rain_probability': rain},
+        'periods': periods,
         'clothing': clothes,
         'week': [
             {'date': d['time'][i], 'min': d['temperature_2m_min'][i], 'max': d['temperature_2m_max'][i], 'rain_probability': d['precipitation_probability_max'][i]}
