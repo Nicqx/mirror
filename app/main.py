@@ -11,9 +11,9 @@ from icalendar import Calendar
 app = FastAPI(title='Smart Wall Dashboard')
 app.mount('/static', StaticFiles(directory='app/static'), name='static')
 
-WEATHER_LAT = float(os.getenv('WEATHER_LAT', '47.3769'))
-WEATHER_LON = float(os.getenv('WEATHER_LON', '8.5417'))
-WEATHER_TZ = os.getenv('WEATHER_TZ', 'Europe/Zurich')
+WEATHER_LAT = float(os.getenv('WEATHER_LAT', '47.4979'))
+WEATHER_LON = float(os.getenv('WEATHER_LON', '19.0402'))
+WEATHER_TZ = os.getenv('WEATHER_TZ', 'Europe/Budapest')
 GOOGLE_CALENDAR_ICAL_URL = os.getenv('GOOGLE_CALENDAR_ICAL_URL', '')
 TRELLO_KEY = os.getenv('TRELLO_KEY', '')
 TRELLO_TOKEN = os.getenv('TRELLO_TOKEN', '')
