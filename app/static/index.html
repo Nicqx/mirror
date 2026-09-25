@@ -12,23 +12,100 @@
     header { display:flex; justify-content:space-between; align-items:end; gap:20px; }
     .date { font-size:clamp(20px,2vw,34px); font-weight:700; }
     .time { font-size:clamp(30px,4vw,58px); font-weight:800; letter-spacing:-1px; }
-    .grid { display:grid; grid-template-columns:1.35fr .85fr; grid-template-rows:minmax(300px,1fr) minmax(240px,.85fr); gap:18px; }
-    .card { background:#151920; border:1px solid #272d36; border-radius:20px; padding:20px; overflow:hidden; }
+
+    .grid {
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      grid-template-rows:minmax(220px,.6fr) minmax(420px,1.4fr);
+      gap:18px;
+      min-height:0;
+    }
+
+    .card {
+      background:#151920;
+      border:1px solid #272d36;
+      border-radius:20px;
+      padding:20px;
+      overflow:hidden;
+      min-width:0;
+      min-height:0;
+    }
+
     h2 { margin:0 0 16px; font-size:22px; }
-    #calendar { grid-row:1 / 3; }
-    .event { display:grid; grid-template-columns:95px 1fr; gap:14px; padding:12px 0; border-bottom:1px solid #272d36; }
+
+    #calendar {
+      grid-column:1;
+      grid-row:1;
+      display:flex;
+      flex-direction:column;
+    }
+
+    #weather-card {
+      grid-column:2;
+      grid-row:1;
+    }
+
+    #trello-card {
+      grid-column:1 / -1;
+      grid-row:2;
+      overflow:auto;
+    }
+
+    #events {
+      overflow:auto;
+      min-height:0;
+      padding-right:4px;
+    }
+
+    .event {
+      display:grid;
+      grid-template-columns:95px 1fr;
+      gap:14px;
+      padding:9px 0;
+      border-bottom:1px solid #272d36;
+    }
+
     .event:last-child { border-bottom:0; }
     .event-time { color:#9ba7b4; font-weight:700; }
     .event-title { font-size:18px; }
+
     .weather-big { font-size:52px; font-weight:800; }
     .muted { color:#9ba7b4; }
     .clothes { margin-top:14px; font-size:18px; line-height:1.5; }
-    .trello-lists { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; }
-    .list { min-width:210px; flex:1; background:#0f1217; border-radius:14px; padding:12px; }
+
+    .trello-lists {
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      overflow-x:auto;
+      padding-bottom:8px;
+      min-height:calc(100% - 42px);
+    }
+
+    .list {
+      min-width:240px;
+      flex:1 0 240px;
+      background:#0f1217;
+      border-radius:14px;
+      padding:12px;
+    }
+
     .list h3 { margin:0 0 10px; font-size:15px; color:#a9b4c0; }
     .tcard { background:#1e242d; margin:8px 0; padding:10px 12px; border-radius:10px; }
     .error { color:#ffb4b4; }
-    @media (max-width:900px) { .grid { grid-template-columns:1fr; grid-template-rows:auto; } #calendar { grid-row:auto; } }
+
+    @media (max-width:900px) {
+      .grid {
+        grid-template-columns:1fr;
+        grid-template-rows:auto auto minmax(420px,1fr);
+      }
+      #calendar,
+      #weather-card,
+      #trello-card {
+        grid-column:1;
+        grid-row:auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -36,8 +113,8 @@
   <header><div class="date" id="date"></div><div class="time" id="time"></div></header>
   <main class="grid">
     <section class="card" id="calendar"><h2>📅 Következő 7 nap</h2><div id="events">Betöltés…</div></section>
-    <section class="card"><h2>🌤 Időjárás és ruha</h2><div id="weather">Betöltés…</div></section>
-    <section class="card"><h2>📌 Trello</h2><div class="trello-lists" id="trello">Betöltés…</div></section>
+    <section class="card" id="weather-card"><h2>🌤 Időjárás és ruha</h2><div id="weather">Betöltés…</div></section>
+    <section class="card" id="trello-card"><h2>📌 Trello</h2><div class="trello-lists" id="trello">Betöltés…</div></section>
   </main>
 </div>
 <script>
