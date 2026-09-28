@@ -61,11 +61,18 @@
       display:grid;
       grid-template-columns:95px 1fr;
       gap:14px;
-      padding:9px 0;
-      border-bottom:1px solid #272d36;
+      padding:9px 12px;
+      margin:3px 0;
+      border-radius:10px;
     }
 
-    .event:last-child { border-bottom:0; }
+    .event.day-0 { background:#18202a; }
+    .event.day-1 { background:#1b2028; }
+    .event.day-2 { background:#1b2321; }
+    .event.day-3 { background:#211f29; }
+    .event.day-4 { background:#241f20; }
+    .event.day-5 { background:#20231b; }
+    .event.day-6 { background:#1b2227; }
     .event-time { color:#9ba7b4; font-weight:700; }
     .event-title { font-size:18px; }
 
@@ -128,8 +135,8 @@ const fmtDay = new Intl.DateTimeFormat('hu-HU',{weekday:'long',year:'numeric',mo
 function tick(){ const d=new Date(); date.textContent=fmtDay.format(d); time.textContent=d.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'}); }
 tick(); setInterval(tick,1000);
 async function json(url){ const r=await fetch(url); if(!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json(); }
-async function loadCalendar(){ try { const data=await json('/api/calendar'); events.innerHTML=data.map(e=>{const d=new Date(e.start);return `<div class="event"><div class="event-time">${d.toLocaleDateString('hu-HU',{weekday:'short'})}<br>${d.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})}</div><div class="event-title">${escapeHtml(e.title)}</div></div>`}).join('') || '<div class="muted">Nincs esemény.</div>'; } catch(e){ events.innerHTML=`<div class="error">${e}</div>`; } }
-async function loadWeather(){ try { const w=await json('/api/weather'); const periods=(w.periods||[]).map(p=>`<div class="weather-period"><div class="weather-period-label">${p.icon} ${escapeHtml(p.label)} · ${escapeHtml(p.time)}</div><div class="weather-period-temp">${Math.round(p.temperature)} °C</div><div class="weather-period-feels">hőérzet ${Math.round(p.feels_like)} °C</div></div>`).join(''); weather.innerHTML=`<div class="weather-big">${Math.round(w.current.temperature)} °C</div><div class="muted">Most · hőérzet ${Math.round(w.current.feels_like)} °C · Ma ${Math.round(w.today.min)}–${Math.round(w.today.max)} °C · Eső ${w.today.rain_probability}%</div><div class="weather-periods">${periods}</div><div class="clothes">👕 ${w.clothing.map(escapeHtml).join(' · ')}</div>`; } catch(e){ weather.innerHTML=`<div class="error">${e}</div>`; } }
+async function loadCalendar(){ try { const data=await json('/api/calendar'); const dayClasses=new Map(); let nextDay=0; events.innerHTML=data.map(e=>{const d=new Date(e.start); const dayKey=d.toLocaleDateString('sv-SE'); if(!dayClasses.has(dayKey)){ dayClasses.set(dayKey,nextDay%7); nextDay++; } const dayClass=dayClasses.get(dayKey); return `<div class="event day-${dayClass}"><div class="event-time">${d.toLocaleDateString('hu-HU',{weekday:'short'})}<br>${d.toLocaleTimeString('hu-HU',{hour:'2-digit',minute:'2-digit'})}</div><div class="event-title">${escapeHtml(e.title)}</div></div>`}).join('') || '<div class="muted">Nincs esemény.</div>'; } catch(e){ events.innerHTML=`<div class="error">${e}</div>`; } }
+async function loadWeather(){ try { const w=await json('/api/weather'); const periods=(w.periods||[]).map(p=>`<div class="weather-period"><div class="weather-period-label">${p.icon} ${escapeHtml(p.label)} · ${escapeHtml(p.time)}</div><div class="weather-period-temp">${Math.round(p.temperature)} °C</div><div class="weather-period-feels">hőérzet ${Math.round(p.feels_like)} °C · eső ${Math.round(p.rain_probability||0)}%</div></div>`).join(''); weather.innerHTML=`<div class="weather-big">${Math.round(w.current.temperature)} °C</div><div class="muted">Most · hőérzet ${Math.round(w.current.feels_like)} °C · Ma ${Math.round(w.today.min)}–${Math.round(w.today.max)} °C · Eső ${w.today.rain_probability}%</div><div class="weather-periods">${periods}</div><div class="clothes">👕 ${w.clothing.map(escapeHtml).join(' · ')}</div>`; } catch(e){ weather.innerHTML=`<div class="error">${e}</div>`; } }
 async function loadTrello(){ try { const data=await json('/api/trello'); trello.innerHTML=data.map(l=>`<div class="list"><h3>${escapeHtml(l.name)}</h3>${l.cards.map(c=>`<div class="tcard">${escapeHtml(c)}</div>`).join('')}</div>`).join(''); } catch(e){ trello.innerHTML=`<div class="error">${e}</div>`; } }
 function escapeHtml(s){ return String(s).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 loadCalendar(); loadWeather(); loadTrello(); setInterval(()=>{loadCalendar();loadWeather();loadTrello();},5*60*1000);
