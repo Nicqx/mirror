@@ -30,7 +30,7 @@ async def weather() -> dict[str, Any]:
         'longitude': WEATHER_LON,
         'timezone': WEATHER_TZ,
         'current': 'temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m',
-        'hourly': 'temperature_2m,apparent_temperature',
+        'hourly': 'temperature_2m,apparent_temperature,precipitation_probability',
         'daily': 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code',
         'forecast_days': 7,
     }
@@ -51,6 +51,7 @@ async def weather() -> dict[str, Any]:
         timestamp: {
             'temperature': h['temperature_2m'][i],
             'feels_like': h['apparent_temperature'][i],
+            'rain_probability': h['precipitation_probability'][i],
         }
         for i, timestamp in enumerate(h['time'])
     }
@@ -72,17 +73,43 @@ async def weather() -> dict[str, Any]:
                 **values,
             })
 
+    def layer_for(feels_like: float) -> str:
+        if feels_like <= 5:
+            return 'meleg kabát + pulóver'
+        if feels_like <= 12:
+            return 'könnyű kabát + pulóver'
+        if feels_like <= 18:
+            return 'pulóver vagy vékony dzseki'
+        if feels_like <= 24:
+            return 'póló / vékony felső'
+        return 'könnyű, nyári ruha'
+
     clothes = []
-    if feels <= 5:
-        clothes += ['meleg kabát', 'pulóver', 'hosszúnadrág']
-    elif feels <= 12:
-        clothes += ['könnyű kabát', 'pulóver', 'hosszúnadrág']
-    elif feels <= 18:
-        clothes += ['pulóver vagy vékony dzseki', 'hosszúnadrág']
+    if periods:
+        period_feels = [p['feels_like'] for p in periods]
+        coolest = min(period_feels)
+        warmest = max(period_feels)
+
+        if warmest - coolest >= 7:
+            clothes.append('réteges öltözet')
+
+        for p in periods:
+            clothes.append(f"{p['label'].lower()}: {layer_for(p['feels_like'])}")
+
+        rainy_periods = [
+            p['label'].lower()
+            for p in periods
+            if p.get('rain_probability', 0) >= 40
+        ]
+        if rainy_periods:
+            clothes.append(f"esernyő ajánlott ({', '.join(rainy_periods)})")
+        elif rain >= 40:
+            clothes.append('esernyő legyen nálad')
     else:
-        clothes += ['póló', 'könnyű nadrág']
-    if rain >= 40:
-        clothes.append('esernyő')
+        clothes.append(layer_for(feels))
+        if rain >= 40:
+            clothes.append('esernyő legyen nálad')
+
     if wind >= 35:
         clothes.append('szélálló felső')
 
