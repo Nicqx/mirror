@@ -106,6 +106,99 @@ WEATHER_LON=19.0402
 WEATHER_TZ=Europe/Budapest
 ```
 
+
+## Kubernetes / k3s telepítés
+
+A production cél a meglévő egy-node-os k3s környezet. A repo tartalmaz:
+
+- `k8s/mirror.yaml` — ConfigMap + Deployment + Service
+- `k8s/secret.env.template` — titkok mintája
+- `scripts/update.sh` — build → k3s image import → apply → rollout
+- `update.sh` — vékony wrapper
+
+A Mirror Kubernetesben natívan a `/mirror` base pathot használja. A publikus route-ot a külön `Nicqx/ingress` repo kezeli Traefikkel.
+
+### 1. Titkok előkészítése
+
+```bash
+cp k8s/secret.env.template k8s/secret.env
+nano k8s/secret.env
+```
+
+A fájl:
+
+```env
+GOOGLE_CALENDAR_ICAL_URL=
+TRELLO_KEY=
+TRELLO_TOKEN=
+TRELLO_BOARD_ID=
+```
+
+A `k8s/secret.env` gitignore-olt. Az update script ebből hozza létre/frissíti a `mirror-secrets` Kubernetes Secretet.
+
+### 2. Dry-run
+
+Pi 5:
+
+```bash
+KUBECTL='sudo k3s kubectl' sh update.sh --target pi5 --dry-run
+```
+
+NUC:
+
+```bash
+sh update.sh --target nuc --dry-run
+```
+
+### 3. Telepítés / frissítés
+
+Pi 5:
+
+```bash
+KUBECTL='sudo k3s kubectl' sh update.sh --target pi5
+```
+
+NUC:
+
+```bash
+sh update.sh --target nuc
+```
+
+A script:
+
+1. ellenőrzi, hogy a kube-context a kért egy-node-os clusterre mutat;
+2. `git pull --ff-only`-t futtat;
+3. Git commit + architektúra alapján egyedi image taget készít;
+4. Docker image-et buildel;
+5. az image-et a k3s containerd-be importálja;
+6. létrehozza/frissíti a `mirror-secrets` Secretet;
+7. alkalmazza a ConfigMap + Deployment + Service manifestet;
+8. megvárja a rollout végét.
+
+A Service neve:
+
+```text
+mirror-service:8080
+```
+
+A pod readiness/liveness endpointjai:
+
+```text
+/healthz
+/livez
+```
+
+### 4. Publikus /mirror útvonal
+
+A publikus HTTPS útvonalat a közös ingress repo kezeli:
+
+```text
+https://pmqxyz.hopto.org/mirror/
+```
+
+A Mirror maga kezeli a `/mirror` prefixet, ezért nincs szükség külön strip-prefix middleware-re.
+
+
 ## Docker kezelés
 
 Indítás / friss build:
@@ -156,7 +249,6 @@ mirror/
 - eseményszínek és egész napos események jobb kezelése
 - Trello kártyák részletesebb megjelenítése
 - napszakfüggő layout
-- ingress / reverse proxy támogatás
 - Raspberry Pi kiosk mód
 - monitor automatikus ON/OFF
 - fizikai gomb vagy jelenlétérzékelő
