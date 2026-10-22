@@ -112,20 +112,33 @@ WEATHER_TZ=Europe/Budapest
 A production cél a meglévő egy-node-os k3s környezet. A repo tartalmaz:
 
 - `k8s/mirror.yaml` — ConfigMap + Deployment + Service
+- `k8s/config.env.template` — környezetfüggő config mintája
 - `k8s/secret.env.template` — titkok mintája
 - `scripts/update.sh` — build → k3s image import → apply → rollout
 - `update.sh` — vékony wrapper
 
 A Mirror Kubernetesben natívan a `/mirror` base pathot használja. A publikus route-ot a külön `Nicqx/ingress` repo kezeli Traefikkel.
 
-### 1. Titkok előkészítése
+### 1. Helyi Kubernetes config és titkok előkészítése
 
 ```bash
+cp k8s/config.env.template k8s/config.env
 cp k8s/secret.env.template k8s/secret.env
+
+nano k8s/config.env
 nano k8s/secret.env
 ```
 
-A fájl:
+A `k8s/config.env` tartalmazza a nem titkos, környezetfüggő értékeket:
+
+```env
+BASE_PATH=/mirror
+WEATHER_LAT=47.4979
+WEATHER_LON=19.0402
+WEATHER_TZ=Europe/Budapest
+```
+
+A `k8s/secret.env` tartalmazza a titkokat:
 
 ```env
 GOOGLE_CALENDAR_ICAL_URL=
@@ -134,7 +147,7 @@ TRELLO_TOKEN=
 TRELLO_BOARD_ID=
 ```
 
-A `k8s/secret.env` gitignore-olt. Az update script ebből hozza létre/frissíti a `mirror-secrets` Kubernetes Secretet.
+Mindkét helyi fájl gitignore-olt. Az update script a configból `mirror-config` ConfigMapet, a titkokból `mirror-secrets` Kubernetes Secretet hoz létre/frissít.
 
 ### 2. Dry-run
 
