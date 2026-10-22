@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 
+k8s/config.env
 k8s/secret.env
 
 # Python
