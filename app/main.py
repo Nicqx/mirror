@@ -3,13 +3,18 @@ import datetime as dt
 from typing import Any
 
 import httpx
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, FastAPI
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from icalendar import Calendar
 
+BASE_PATH = os.getenv('BASE_PATH', '').strip().rstrip('/')
+if BASE_PATH and not BASE_PATH.startswith('/'):
+    raise RuntimeError('BASE_PATH must start with /')
+
 app = FastAPI(title='Smart Wall Dashboard')
-app.mount('/static', StaticFiles(directory='app/static'), name='static')
+router = APIRouter(prefix=BASE_PATH)
+app.mount(f'{BASE_PATH}/static' if BASE_PATH else '/static', StaticFiles(directory='app/static'), name='static')
 
 WEATHER_LAT = float(os.getenv('WEATHER_LAT', '47.4979'))
 WEATHER_LON = float(os.getenv('WEATHER_LON', '19.0402'))
@@ -19,11 +24,11 @@ TRELLO_KEY = os.getenv('TRELLO_KEY', '')
 TRELLO_TOKEN = os.getenv('TRELLO_TOKEN', '')
 TRELLO_BOARD_ID = os.getenv('TRELLO_BOARD_ID', '')
 
-@app.get('/')
+@router.get('/')
 async def index():
     return FileResponse('app/static/index.html')
 
-@app.get('/api/weather')
+@router.get('/api/weather')
 async def weather() -> dict[str, Any]:
     params = {
         'latitude': WEATHER_LAT,
@@ -124,7 +129,7 @@ async def weather() -> dict[str, Any]:
         ]
     }
 
-@app.get('/api/calendar')
+@router.get('/api/calendar')
 async def calendar() -> list[dict[str, Any]]:
     if not GOOGLE_CALENDAR_ICAL_URL:
         today = dt.datetime.now().date()
@@ -157,7 +162,7 @@ async def calendar() -> list[dict[str, Any]]:
     out.sort(key=lambda x: x['start'])
     return out[:30]
 
-@app.get('/api/trello')
+@router.get('/api/trello')
 async def trello() -> list[dict[str, Any]]:
     if not (TRELLO_KEY and TRELLO_TOKEN and TRELLO_BOARD_ID):
         return [
@@ -173,3 +178,22 @@ async def trello() -> list[dict[str, Any]]:
         r.raise_for_status()
         lists = r.json()
     return [{'name': x['name'], 'cards': [c['name'] for c in x.get('cards', [])]} for x in lists]
+
+
+if BASE_PATH:
+    @app.get(BASE_PATH, include_in_schema=False)
+    async def base_redirect():
+        return RedirectResponse(f'{BASE_PATH}/')
+
+
+@app.get('/healthz', include_in_schema=False)
+async def healthz():
+    return {'status': 'ok'}
+
+
+@app.get('/livez', include_in_schema=False)
+async def livez():
+    return {'status': 'ok'}
+
+
+app.include_router(router)
