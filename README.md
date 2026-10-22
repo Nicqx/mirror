@@ -10,6 +10,7 @@ Jelenlegi funkciók:
 - 5 percenkénti automatikus frissítés
 - reszponzív, sötét dashboard UI
 - Docker Compose futtatás
+- k3s/Kubernetes telepítés helyi image importtal
 
 ## Gyors indítás
 
@@ -243,16 +244,24 @@ docker compose up -d --build
 
 ```text
 mirror/
+├── .github/workflows/checks.yml
 ├── app/
 │   ├── main.py
 │   └── static/
 │       └── index.html
+├── k8s/
+│   ├── config.env.template
+│   ├── mirror.yaml
+│   └── secret.env.template
+├── scripts/
+│   └── update.sh
 ├── .dockerignore
 ├── .env.template
 ├── .gitignore
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── update.sh
 └── README.md
 ```
 
