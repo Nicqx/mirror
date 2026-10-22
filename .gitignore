@@ -3,6 +3,8 @@
 .env.local
 .env.*.local
 
+k8s/secret.env
+
 # Python
 __pycache__/
 *.py[cod]
