@@ -7,6 +7,7 @@ NO_PULL=0
 NAMESPACE="${NAMESPACE:-default}"
 KUBECTL="${KUBECTL:-kubectl}"
 K3S_CTR="${K3S_CTR:-sudo k3s ctr}"
+CONFIG_FILE="${CONFIG_FILE:-k8s/config.env}"
 SECRET_FILE="${SECRET_FILE:-k8s/secret.env}"
 
 usage() {
@@ -27,11 +28,19 @@ done
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
+[ -f "$CONFIG_FILE" ] || {
+  echo "HIBA: Hianyzik a $CONFIG_FILE." >&2
+  echo "Masold le: cp k8s/config.env.template k8s/config.env" >&2
+  exit 1
+}
+
 [ -f "$SECRET_FILE" ] || {
   echo "HIBA: Hianyzik a $SECRET_FILE." >&2
   echo "Masold le: cp k8s/secret.env.template k8s/secret.env" >&2
   exit 1
 }
+
+chmod 600 "$SECRET_FILE"
 
 if [ -n "$(git status --porcelain)" ] && [ "$NO_PULL" -eq 0 ]; then
   echo "HIBA: Helyi modositas van. Commitold/mentsd, vagy hasznald a --no-pull opciot." >&2
@@ -64,11 +73,20 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 
 sed "s|image: mirror:0.0.0|image: $IMAGE|" k8s/mirror.yaml > "$TMP/resources.yaml"
 
-$KUBECTL create secret generic mirror-secrets   --from-env-file="$SECRET_FILE"   --dry-run=client   -o yaml > "$TMP/secret.yaml"
+$KUBECTL create configmap mirror-config \
+  --from-env-file="$CONFIG_FILE" \
+  --dry-run=client \
+  -o yaml > "$TMP/config.yaml"
+
+$KUBECTL create secret generic mirror-secrets \
+  --from-env-file="$SECRET_FILE" \
+  --dry-run=client \
+  -o yaml > "$TMP/secret.yaml"
 
 echo "Cel ellenorizve: $TARGET ($NODE_ARCH); namespace: $NAMESPACE"
 
 if [ "$DRY_RUN" -eq 1 ]; then
+  $KUBECTL apply -n "$NAMESPACE" --dry-run=server -f "$TMP/config.yaml" >/dev/null
   $KUBECTL apply -n "$NAMESPACE" --dry-run=server -f "$TMP/secret.yaml" >/dev/null
   $KUBECTL apply -n "$NAMESPACE" --dry-run=server -f "$TMP/resources.yaml" >/dev/null
   echo "Szerveroldali dry-run sikeres; build es cluster-modositas nem tortent."
@@ -88,6 +106,7 @@ docker build --pull -t "$IMAGE" .
 docker save -o "$TMP/image.tar" "$IMAGE"
 $K3S_CTR images import "$TMP/image.tar"
 
+$KUBECTL apply -n "$NAMESPACE" -f "$TMP/config.yaml"
 $KUBECTL apply -n "$NAMESPACE" -f "$TMP/secret.yaml"
 $KUBECTL apply -n "$NAMESPACE" -f "$TMP/resources.yaml"
 $KUBECTL rollout status deployment/mirror -n "$NAMESPACE" --timeout=180s
