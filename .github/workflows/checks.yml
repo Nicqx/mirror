@@ -1,0 +1,43 @@
+name: Mirror checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Python syntax
+        run: python -m compileall -q app
+
+      - name: Base path and health smoke test
+        env:
+          BASE_PATH: /mirror
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from app.main import app
+
+          client = TestClient(app)
+          assert client.get("/healthz").status_code == 200
+          assert client.get("/livez").status_code == 200
+          assert client.get("/mirror", follow_redirects=False).status_code in (307, 308)
+          assert client.get("/mirror/").status_code == 200
+          assert client.get("/mirror/api/trello").status_code == 200
+          PY
+
+      - name: Shell syntax
+        run: sh -n update.sh scripts/update.sh
+
+      - name: Docker build
+        run: docker build -t mirror:ci .
