@@ -1,3 +1,3 @@
 #!/bin/sh
 set -eu
-exec "$(dirname "$0")/scripts/update.sh" "$@"
+exec sh "$(dirname "$0")/scripts/update.sh" "$@"
